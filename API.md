@@ -50,8 +50,8 @@ Client retries the original request with payment proof headers.
 
 **Request:**
 ```http
-GET /api/data HTTP/1.1
-Host: your-api-domain.com
+         GET /api/data HTTP/1.1
+         Host: chainx402.xyz
 X-Payment-Id: payment_abc123xyz
 X-Payment-Signature: 5j7s8...
 ```

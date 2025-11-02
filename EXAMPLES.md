@@ -286,7 +286,7 @@ def call_paid_api(api_url, endpoint):
     return response.json()
 
 # Usage
-data = call_paid_api('https://your-api.com', '/api/data')
+data = call_paid_api('https://chainx402.xyz', '/api/data', payer_keypair)
 print(data)
 ```
 
