@@ -236,6 +236,58 @@ await connection.confirmTransaction(signature);
 | API Response Time | <100ms |
 | Uptime | Production-grade reliability |
 
+## Testing
+
+Complete testing documentation is available in [TESTING.md](./TESTING.md).
+
+### Quick Test Commands
+
+**Free Endpoints:**
+```bash
+# Health check
+curl -i https://chainx402.xyz/api/health
+
+# Service info
+curl -i https://chainx402.xyz/api/info
+```
+
+**Paid Endpoint (HTTP 402):**
+```bash
+# Request protected data
+curl -i https://chainx402.xyz/api/data
+
+# Response: HTTP 402 with payment headers
+# X-Payment-Id, X-Payment-Amount, X-Payment-Token, etc.
+```
+
+**Retry with Payment:**
+```bash
+curl -i https://chainx402.xyz/api/data \
+  -H "X-Payment-Id: payment_id" \
+  -H "X-Payment-Signature: transaction_signature"
+```
+
+**Facilitator Endpoints:**
+```bash
+# Service info
+curl -i https://chainx402.xyz/facilitator
+
+# Health check
+curl -i https://chainx402.xyz/facilitator/health
+
+# Create payment request
+curl -i -X POST https://chainx402.xyz/facilitator/payment/request \
+  -H "Content-Type: application/json" \
+  -d '{"seller":"WALLET","amount":0.0004,"token":"USDC"}'
+
+# Verify payment
+curl -i -X POST https://chainx402.xyz/facilitator/payment/verify \
+  -H "Content-Type: application/json" \
+  -d '{"paymentId":"payment_id","signature":"tx_signature"}'
+```
+
+For complete testing examples, see [TESTING.md](./TESTING.md).
+
 ## Security
 
 - All payments verified on-chain via Solana RPC
