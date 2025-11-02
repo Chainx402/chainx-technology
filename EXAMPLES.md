@@ -6,7 +6,7 @@ Complete code examples for using ChainX Protocol in production at https://chainx
 
 ### Using Buyer SDK
 
-The buyer SDK provides a client for making requests to paid APIs. It automatically handles HTTP 402 responses, payment creation, and request retry.
+The buyer SDK provides a client for making requests to paid APIs. It automatically handles ChainX Protocol HTTP 402 responses, payment creation, and request retry.
 
 ```typescript
 import { APIClient } from '@ChainX/buyer-sdk';
@@ -88,7 +88,7 @@ const paymentMiddleware = new PaymentMiddleware({
   timeout: 300000 // 5 minutes
 });
 
-// Protected endpoint - middleware returns HTTP 402 if no payment
+// Protected endpoint - middleware returns ChainX Protocol HTTP 402 if no payment
 app.get('/api/data', 
   paymentMiddleware.createMiddleware({
     price: 0.0004,

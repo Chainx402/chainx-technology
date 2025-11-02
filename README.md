@@ -1,6 +1,6 @@
-# ChainX Technology - HTTP 402 Payment Protocol
+# ChainX Technology - ChainX Protocol
 
-ChainX Protocol is a production-ready HTTP 402 payment protocol implementation built on Solana. This repository documents the real implementation running at https://chainx402.xyz.
+ChainX Protocol is a production-ready HTTP 402 implementation built on Solana for ChainX Protocol. This repository documents the real implementation running at https://chainx402.xyz.
 
 ## Production Implementation
 
@@ -12,7 +12,7 @@ ChainX Protocol is deployed and operational at:
 ### Real Features
 
 - On-chain Solana transaction verification
-- HTTP 402 Payment Required standard implementation
+- ChainX Protocol HTTP 402 implementation
 - Netlify serverless functions for scalability
 - Real-time payment verification
 - Production-ready error handling
@@ -21,7 +21,7 @@ ChainX Protocol is deployed and operational at:
 
 ### What is ChainX Protocol?
 
-ChainX Protocol implements the HTTP 402 Payment Required standard (RFC 7231) using blockchain payments on Solana. It allows servers to request payment before granting access to resources, enabling programmatic payments for AI agents and automation.
+ChainX Protocol implements HTTP 402 Payment Required for ChainX Protocol using Solana blockchain payments. It allows servers to request payment before granting access to resources, enabling programmatic payments for AI agents and automation.
 
 ### How It Works
 
@@ -251,7 +251,7 @@ curl -i https://chainx402.xyz/api/health
 curl -i https://chainx402.xyz/api/info
 ```
 
-**Paid Endpoint (HTTP 402):**
+**Paid Endpoint (ChainX Protocol HTTP 402):**
 ```bash
 # Request protected data
 curl -i https://chainx402.xyz/api/data

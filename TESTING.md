@@ -35,7 +35,7 @@ Content-Type: application/json
 
 {
   "name": "ChainX Protocol API",
-  "description": "HTTP 402 Payment Protocol API",
+  "description": "ChainX Protocol HTTP 402 API",
   "version": "1.0.0",
   "pricing": {
     "perRequest": 0.0004,
@@ -45,7 +45,7 @@ Content-Type: application/json
 }
 ```
 
-### Paid Endpoints (HTTP 402)
+### Paid Endpoints (ChainX Protocol HTTP 402)
 
 **Request Protected Data:**
 ```bash

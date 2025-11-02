@@ -2,11 +2,11 @@
 
 ## Overview
 
-ChainX Protocol provides HTTP 402 payment implementation on Solana. This document covers the real production API endpoints and payment flow at https://chainx402.xyz.
+ChainX Protocol provides ChainX Protocol HTTP 402 implementation on Solana. This document covers the real production API endpoints and payment flow at https://chainx402.xyz.
 
 All endpoints and code examples are from the implementation in the repository.
 
-## HTTP 402 Payment Flow
+## ChainX Protocol HTTP 402 Payment Flow
 
 ### Step 1: Initial Request
 
@@ -70,7 +70,7 @@ Content-Type: application/json
 
 ### Payment Request Headers (Server → Client)
 
-When a server responds with HTTP 402 Payment Required, it includes these headers:
+When ChainX Protocol responds with HTTP 402 Payment Required, it includes these headers:
 
 | Header | Description | Type | Required |
 |--------|-------------|------|----------|
