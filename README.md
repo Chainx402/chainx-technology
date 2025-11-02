@@ -7,7 +7,7 @@ ChainX Protocol is a production-ready HTTP 402 payment protocol implementation b
 ChainX Protocol is deployed and operational at:
 - **Website**: https://chainx402.xyz
 - **API Endpoint**: https://chainx402.xyz/api/data
-- **Facilitator Service**: https://chainx402.xyz/.netlify/functions/facilitator
+- **Facilitator Service**: https://chainx402.xyz/facilitator
 
 ### Real Features
 
@@ -39,7 +39,7 @@ ChainX Protocol implements the HTTP 402 Payment Required standard (RFC 7231) usi
    - Get transaction signature
 
 4. Client verifies payment:
-   - POST to `https://chainx402.xyz/.netlify/functions/facilitator/payment/verify`
+   - POST to `https://chainx402.xyz/facilitator/payment/verify`
    - Body: `{ "paymentId": "...", "signature": "..." }`
 
 5. Client retries original request with headers:
@@ -61,7 +61,7 @@ When a server responds with HTTP 402 Payment Required, it includes these headers
 | X-Payment-Token-Mint | Token contract address | EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v |
 | X-Payment-To | Seller wallet address | SELLER_WALLET_ADDRESS |
 | X-Payment-Memo | Payment memo with ID | ChainX402:payment_abc123 |
-| X-Payment-Facilitator | Facilitator service URL | https://chainx402.xyz/.netlify/functions/facilitator |
+| X-Payment-Facilitator | Facilitator service URL | https://chainx402.xyz/facilitator |
 
 ### Retry Headers
 
@@ -88,10 +88,10 @@ When retrying a request after payment, include:
 
 The facilitator service verifies Solana transactions on-chain:
 
-- `POST https://chainx402.xyz/.netlify/functions/facilitator/payment/request` - Create payment request
-- `POST https://chainx402.xyz/.netlify/functions/facilitator/payment/verify` - Verify payment transaction
-- `GET https://chainx402.xyz/.netlify/functions/facilitator/payment/:id` - Get payment status
-- `GET https://chainx402.xyz/.netlify/functions/facilitator/health` - Health check
+- `POST https://chainx402.xyz/facilitator/payment/request` - Create payment request
+- `POST https://chainx402.xyz/facilitator/payment/verify` - Verify payment transaction
+- `GET https://chainx402.xyz/facilitator/payment/:id` - Get payment status
+- `GET https://chainx402.xyz/facilitator/health` - Health check
 
 ### Payment Verification
 
@@ -134,7 +134,7 @@ if (response.status === 402) {
   
   // Step 4: Verify payment with facilitator
   const verifyResponse = await fetch(
-    'https://chainx402.xyz/.netlify/functions/facilitator/payment/verify',
+    'https://chainx402.xyz/facilitator/payment/verify',
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -169,7 +169,7 @@ curl -i https://chainx402.xyz/api/data
 # (Use Solana wallet to send 0.0004 USDC with memo)
 
 # Step 3: Verify payment
-curl -X POST https://chainx402.xyz/.netlify/functions/facilitator/payment/verify \
+curl -X POST https://chainx402.xyz/facilitator/payment/verify \
   -H "Content-Type: application/json" \
   -d '{"paymentId":"payment_id","signature":"transaction_signature"}'
 

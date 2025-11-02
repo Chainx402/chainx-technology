@@ -2,7 +2,7 @@
 
 ## Overview
 
-ChainX Protocol provides HTTP 402 payment implementation on Solana. This document covers the API endpoints and payment flow.
+ChainX Protocol provides HTTP 402 payment implementation on Solana. This document covers the real production API endpoints and payment flow at https://chainx402.xyz.
 
 All endpoints and code examples are from the implementation in the repository.
 
@@ -15,7 +15,7 @@ Client makes a request to a protected API endpoint.
 **Request:**
 ```http
 GET /api/data HTTP/1.1
-Host: your-api-domain.com
+Host: chainx402.xyz
 ```
 
 **Response (HTTP 402):**

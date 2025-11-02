@@ -1,6 +1,6 @@
 # ChainX Protocol - Code Examples
 
-Complete code examples for using ChainX Protocol in various languages and frameworks.
+Complete code examples for using ChainX Protocol in production at https://chainx402.xyz.
 
 ## JavaScript/TypeScript
 
@@ -12,7 +12,7 @@ The buyer SDK provides a client for making requests to paid APIs. It automatical
 import { APIClient } from '@147x402/buyer-sdk';
 
 const client = new APIClient({
-  facilitatorUrl: process.env.FACILITATOR_URL,
+  facilitatorUrl: process.env.FACILITATOR_URL || 'https://chainx402.xyz/facilitator',
   walletConfig: {
     rpcUrl: 'https://api.mainnet-beta.solana.com',
     commitment: 'confirmed',
@@ -21,7 +21,7 @@ const client = new APIClient({
 });
 
 // GET request with automatic payment handling
-const result = await client.get(apiUrl, '/api/data', {
+const result = await client.get('https://chainx402.xyz', '/api/data', {
   fromWallet: wallet.publicKey,
   signTransaction: wallet.signTransaction
 });
@@ -80,7 +80,7 @@ const app = express();
 app.use(express.json());
 
 const paymentMiddleware = new PaymentMiddleware({
-  facilitatorUrl: process.env.FACILITATOR_URL,
+  facilitatorUrl: process.env.FACILITATOR_URL || 'https://chainx402.xyz/facilitator',
   sellerWallet: process.env.SELLER_WALLET,
   defaultToken: 'USDC',
   defaultTokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
@@ -112,7 +112,7 @@ app.listen(3000);
 import { createPaidAPIServer } from '@147x402/seller-sdk';
 
 const server = await createPaidAPIServer({
-  facilitatorUrl: process.env.FACILITATOR_URL,
+  facilitatorUrl: process.env.FACILITATOR_URL || 'https://chainx402.xyz/facilitator',
   sellerWallet: process.env.SELLER_WALLET,
   defaultToken: 'USDC',
   defaultTokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
