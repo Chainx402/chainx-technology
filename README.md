@@ -434,10 +434,12 @@ app.get('/api/data', paymentMiddleware.createMiddleware({
 
 ## 📖 Resources
 
+- **GitHub**: [https://github.com/Chainx402/chainx-technology](https://github.com/Chainx402/chainx-technology)
+- **X (Twitter)**: [https://x.com/Chainx402](https://x.com/Chainx402)
 - **Documentation**: [https://chainx402.xyz/docs](https://chainx402.xyz/docs)
 - **API Reference**: [https://chainx402.xyz/api](https://chainx402.xyz/api)
 - **HTTP 402 Guide**: [https://chainx402.xyz/chainx402](https://chainx402.xyz/chainx402)
-- **GitHub**: [https://github.com/Chainx402/chain](https://github.com/Chainx402/chain)
+- **Main Repository**: [https://github.com/Chainx402/chain](https://github.com/Chainx402/chain)
 
 ---
 
@@ -455,6 +457,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📞 Support
 
+- 🐦 **X (Twitter)**: [@Chainx402](https://x.com/Chainx402)
+- 💻 **GitHub**: [chainx-technology](https://github.com/Chainx402/chainx-technology)
 - 📧 Email: support@chainx.xyz
 - 💬 Discord: [Join our community](https://discord.gg/chainx)
 - 🐛 Issues: [GitHub Issues](https://github.com/Chainx402/chainx-technology/issues)
