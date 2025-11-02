@@ -9,7 +9,7 @@ Complete code examples for using ChainX Protocol in production at https://chainx
 The buyer SDK provides a client for making requests to paid APIs. It automatically handles HTTP 402 responses, payment creation, and request retry.
 
 ```typescript
-import { APIClient } from '@147x402/buyer-sdk';
+import { APIClient } from '@ChainX/buyer-sdk';
 
 const client = new APIClient({
   facilitatorUrl: process.env.FACILITATOR_URL || 'https://chainx402.xyz/facilitator',
@@ -39,7 +39,7 @@ if (result.success) {
 The payment client handles Solana payment transactions.
 
 ```typescript
-import { PaymentClient } from '@147x402/buyer-sdk';
+import { PaymentClient } from '@ChainX/buyer-sdk';
 
 const paymentClient = new PaymentClient({
   rpcUrl: 'https://api.mainnet-beta.solana.com',
@@ -74,7 +74,7 @@ The seller SDK provides middleware for accepting payments in API endpoints.
 
 ```typescript
 import express from 'express';
-import { PaymentMiddleware } from '@147x402/seller-sdk';
+import { PaymentMiddleware } from '@ChainX/seller-sdk';
 
 const app = express();
 app.use(express.json());
@@ -109,7 +109,7 @@ app.listen(3000);
 ### Node.js/Fastify Server
 
 ```typescript
-import { createPaidAPIServer } from '@147x402/seller-sdk';
+import { createPaidAPIServer } from '@ChainX/seller-sdk';
 
 const server = await createPaidAPIServer({
   facilitatorUrl: process.env.FACILITATOR_URL || 'https://chainx402.xyz/facilitator',
