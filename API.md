@@ -1,32 +1,21 @@
-# ChainX Protocol - Complete API Reference
+# ChainX Protocol - API Reference
 
 ## Overview
 
-ChainX Protocol provides a complete HTTP 402 payment implementation on Solana. This document covers all API endpoints, headers, and integration methods.
+ChainX Protocol provides HTTP 402 payment implementation on Solana. This document covers the API endpoints and payment flow.
 
----
-
-## Base URLs
-
-### API Service
-```
-https://api.chainx402.xyz
-```
-
-### Facilitator Service
-```
-https://facilitator.chainx402.xyz
-```
-
----
+All endpoints and code examples are from the implementation in the repository.
 
 ## HTTP 402 Payment Flow
 
 ### Step 1: Initial Request
 
+Client makes a request to a protected API endpoint.
+
+**Request:**
 ```http
-GET /protected-resource HTTP/1.1
-Host: api.chainx402.xyz
+GET /api/data HTTP/1.1
+Host: your-api-domain.com
 ```
 
 **Response (HTTP 402):**
@@ -39,7 +28,6 @@ X-Payment-Token: USDC
 X-Payment-Token-Mint: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
 X-Payment-To: SELLER_WALLET_ADDRESS
 X-Payment-Memo: ChainX:payment_abc123xyz
-X-Payment-Facilitator: https://facilitator.chainx402.xyz
 
 {
   "error": "Payment Required",
@@ -52,72 +40,18 @@ X-Payment-Facilitator: https://facilitator.chainx402.xyz
 }
 ```
 
-### Step 2: Payment Request
+### Step 2: Payment Transaction
 
+Client creates and sends a Solana payment transaction with the payment details from the headers.
+
+### Step 3: Retry Request with Payment Proof
+
+Client retries the original request with payment proof headers.
+
+**Request:**
 ```http
-POST /payment/request HTTP/1.1
-Host: facilitator.chainx402.xyz
-Content-Type: application/json
-
-{
-  "chain": "solana",
-  "seller": "SELLER_WALLET_ADDRESS",
-  "amount": 0.0004,
-  "token": "USDC",
-  "tokenMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-  "metadata": {
-    "apiEndpoint": "/protected-resource",
-    "paymentId": "payment_abc123xyz",
-    "timestamp": 1699123456789
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "paymentId": "payment_abc123xyz",
-  "paymentInstructions": {
-    "to": "SELLER_WALLET_ADDRESS",
-    "amount": 0.0004,
-    "token": "USDC",
-    "tokenMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-    "memo": "ChainX:payment_abc123xyz"
-  }
-}
-```
-
-### Step 3: Payment Verification
-
-```http
-POST /payment/verify HTTP/1.1
-Host: facilitator.chainx402.xyz
-Content-Type: application/json
-
-{
-  "paymentId": "payment_abc123xyz",
-  "signature": "5j7s8...",
-  "chain": "solana"
-}
-```
-
-**Response:**
-```json
-{
-  "status": "verified",
-  "paymentId": "payment_abc123xyz",
-  "signature": "5j7s8...",
-  "timestamp": 1699123456789,
-  "amount": 0.0004,
-  "token": "USDC"
-}
-```
-
-### Step 4: Retry Request with Payment Proof
-
-```http
-GET /protected-resource HTTP/1.1
-Host: api.chainx402.xyz
+GET /api/data HTTP/1.1
+Host: your-api-domain.com
 X-Payment-Id: payment_abc123xyz
 X-Payment-Signature: 5j7s8...
 ```
@@ -132,110 +66,52 @@ Content-Type: application/json
 }
 ```
 
----
-
 ## HTTP Headers Reference
 
 ### Payment Request Headers (Server → Client)
 
+When a server responds with HTTP 402 Payment Required, it includes these headers:
+
 | Header | Description | Type | Required |
 |--------|-------------|------|----------|
-| `X-Payment-Required` | Indicates payment is required | `string` | Yes |
-| `X-Payment-Id` | Unique payment identifier | `string` | Yes |
-| `X-Payment-Amount` | Payment amount (decimal) | `string` | Yes |
-| `X-Payment-Token` | Token symbol | `string` | Yes |
-| `X-Payment-Token-Mint` | Token contract/mint address | `string` | Yes |
-| `X-Payment-To` | Seller wallet address | `string` | Yes |
-| `X-Payment-Memo` | Payment memo with ID | `string` | Yes |
-| `X-Payment-Facilitator` | Facilitator service URL | `string` | Yes |
+| X-Payment-Required | Indicates payment is required | string | Yes |
+| X-Payment-Id | Unique payment identifier | string | Yes |
+| X-Payment-Amount | Payment amount (decimal) | string | Yes |
+| X-Payment-Token | Token symbol | string | Yes |
+| X-Payment-Token-Mint | Token contract/mint address | string | Yes |
+| X-Payment-To | Seller wallet address | string | Yes |
+| X-Payment-Memo | Payment memo with ID | string | Yes |
 
 ### Payment Proof Headers (Client → Server)
 
+When retrying a request after payment, include:
+
 | Header | Description | Type | Required |
 |--------|-------------|------|----------|
-| `X-Payment-Id` | Original payment ID | `string` | Yes |
-| `X-Payment-Signature` | Transaction signature | `string` | Yes |
+| X-Payment-Id | Original payment ID | string | Yes |
+| X-Payment-Signature | Transaction signature | string | Yes |
 
----
+## Payment Transaction Details
 
-## Facilitator Service Endpoints
+### Solana Transaction Structure
 
-### Create Payment Request
+The payment transaction must include:
 
-**Endpoint:** `POST /payment/request`
+- Token transfer instruction (SOL or SPL token)
+- Memo instruction with payment ID
+- Valid signature from payer wallet
+- Confirmed on-chain status
 
-**Request Body:**
-```json
-{
-  "chain": "solana",
-  "seller": "string",
-  "amount": 0.0004,
-  "token": "USDC",
-  "tokenMint": "string",
-  "metadata": {
-    "apiEndpoint": "string",
-    "paymentId": "string",
-    "timestamp": 1699123456789
-  }
-}
-```
+### Payment Verification
 
-**Response:**
-```json
-{
-  "paymentId": "string",
-  "paymentInstructions": {
-    "to": "string",
-    "amount": 0.0004,
-    "token": "USDC",
-    "tokenMint": "string",
-    "memo": "string"
-  }
-}
-```
+Payment verification checks:
 
-### Verify Payment
-
-**Endpoint:** `POST /payment/verify`
-
-**Request Body:**
-```json
-{
-  "paymentId": "string",
-  "signature": "string",
-  "chain": "solana"
-}
-```
-
-**Response:**
-```json
-{
-  "status": "verified",
-  "paymentId": "string",
-  "signature": "string",
-  "timestamp": 1699123456789,
-  "amount": 0.0004,
-  "token": "USDC"
-}
-```
-
-### Get Payment Status
-
-**Endpoint:** `GET /payment/{paymentId}`
-
-**Response:**
-```json
-{
-  "status": "verified",
-  "paymentId": "string",
-  "signature": "string",
-  "timestamp": 1699123456789,
-  "amount": 0.0004,
-  "token": "USDC"
-}
-```
-
----
+1. Transaction signature is valid
+2. Transaction is confirmed on-chain
+3. Recipient matches seller wallet address
+4. Amount matches payment request
+5. Token mint matches (if SPL token)
+6. Memo includes payment ID
 
 ## Error Responses
 
@@ -289,94 +165,13 @@ Content-Type: application/json
 }
 ```
 
----
-
-## Code Examples
-
-### Complete JavaScript Example
-
-```javascript
-async function callPaidAPI(endpoint) {
-  // Step 1: Initial request
-  let response = await fetch(`https://api.chainx402.xyz${endpoint}`);
-  
-  // Step 2: Check for HTTP 402
-  if (response.status === 402) {
-    // Extract payment info
-    const paymentId = response.headers.get('X-Payment-Id');
-    const amount = parseFloat(response.headers.get('X-Payment-Amount'));
-    const token = response.headers.get('X-Payment-Token');
-    const tokenMint = response.headers.get('X-Payment-Token-Mint');
-    const sellerWallet = response.headers.get('X-Payment-To');
-    const facilitatorUrl = response.headers.get('X-Payment-Facilitator');
-    
-    // Step 3: Get payment instructions
-    const paymentRequest = await fetch(`${facilitatorUrl}/payment/request`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chain: 'solana',
-        seller: sellerWallet,
-        amount: amount,
-        token: token,
-        tokenMint: tokenMint,
-        metadata: {
-          apiEndpoint: endpoint,
-          paymentId: paymentId,
-          timestamp: Date.now()
-        }
-      })
-    });
-    
-    const { paymentInstructions } = await paymentRequest.json();
-    
-    // Step 4: Send payment transaction
-    const signature = await sendSolanaPayment(paymentInstructions, wallet);
-    
-    // Step 5: Verify payment
-    await fetch(`${facilitatorUrl}/payment/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        paymentId: paymentId,
-        signature: signature,
-        chain: 'solana'
-      })
-    });
-    
-    // Step 6: Retry request with payment proof
-    response = await fetch(`https://api.chainx402.xyz${endpoint}`, {
-      headers: {
-        'X-Payment-Id': paymentId,
-        'X-Payment-Signature': signature
-      }
-    });
-  }
-  
-  return await response.json();
-}
-```
-
----
-
-## Rate Limits
-
-- **API Requests**: 1000 requests per hour per IP
-- **Payment Verification**: No limit
-- **Payment Requests**: 100 requests per minute per wallet
-
----
-
 ## Best Practices
 
-1. **Always verify payments** before granting access
-2. **Cache payment verifications** to reduce facilitator calls
-3. **Use payment IDs** to prevent duplicate charges
-4. **Handle errors gracefully** - always check response status
-5. **Store signatures** for audit trails
-6. **Set payment timeouts** (recommended: 5 minutes)
-
----
+1. Always verify payments before granting access
+2. Cache payment verifications to reduce RPC calls
+3. Use payment IDs to prevent duplicate charges
+4. Handle errors gracefully - always check response status
+5. Store signatures for audit trails
+6. Set payment timeouts (recommended: 5 minutes)
 
 For more information, visit: https://chainx402.xyz
-

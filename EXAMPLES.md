@@ -2,127 +2,234 @@
 
 Complete code examples for using ChainX Protocol in various languages and frameworks.
 
----
-
 ## JavaScript/TypeScript
-
-### Basic Payment Flow
-
-```javascript
-async function callPaidAPI(apiUrl, endpoint) {
-  // Step 1: Initial request
-  let response = await fetch(`${apiUrl}${endpoint}`);
-  
-  if (response.status === 402) {
-    // Step 2: Extract payment information
-    const paymentId = response.headers.get('X-Payment-Id');
-    const amount = parseFloat(response.headers.get('X-Payment-Amount'));
-    const token = response.headers.get('X-Payment-Token');
-    const sellerWallet = response.headers.get('X-Payment-To');
-    const facilitatorUrl = response.headers.get('X-Payment-Facilitator');
-    
-    // Step 3: Get payment instructions from facilitator
-    const paymentRequest = await fetch(`${facilitatorUrl}/payment/request`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chain: 'solana',
-        seller: sellerWallet,
-        amount: amount,
-        token: token,
-        tokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-        metadata: {
-          apiEndpoint: endpoint,
-          paymentId: paymentId,
-          timestamp: Date.now()
-        }
-      })
-    });
-    
-    const { paymentInstructions } = await paymentRequest.json();
-    
-    // Step 4: Send Solana payment
-    const signature = await sendSolanaPayment(paymentInstructions, wallet);
-    
-    // Step 5: Verify payment
-    await fetch(`${facilitatorUrl}/payment/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        paymentId: paymentId,
-        signature: signature,
-        chain: 'solana'
-      })
-    });
-    
-    // Step 6: Retry with payment proof
-    response = await fetch(`${apiUrl}${endpoint}`, {
-      headers: {
-        'X-Payment-Id': paymentId,
-        'X-Payment-Signature': signature
-      }
-    });
-  }
-  
-  return await response.json();
-}
-
-// Usage
-const data = await callPaidAPI('https://api.chainx402.xyz', '/api/data');
-console.log(data);
-```
 
 ### Using Buyer SDK
 
-```typescript
-import { createAPIClient } from '@ChainX/buyer-sdk';
+The buyer SDK provides a client for making requests to paid APIs. It automatically handles HTTP 402 responses, payment creation, and request retry.
 
-const client = createAPIClient({
-  facilitatorUrl: 'https://facilitator.chainx402.xyz',
-  rpcUrl: 'https://api.mainnet-beta.solana.com'
+```typescript
+import { APIClient } from '@147x402/buyer-sdk';
+
+const client = new APIClient({
+  facilitatorUrl: process.env.FACILITATOR_URL,
+  walletConfig: {
+    rpcUrl: 'https://api.mainnet-beta.solana.com',
+    commitment: 'confirmed',
+    maxRetries: 3
+  }
 });
 
-// GET request with auto-payment
-const data = await client.get('https://api.chainx402.xyz', '/api/data', {
+// GET request with automatic payment handling
+const result = await client.get(apiUrl, '/api/data', {
   fromWallet: wallet.publicKey,
   signTransaction: wallet.signTransaction
 });
 
-// POST request with auto-payment
-const result = await client.post('https://api.chainx402.xyz', '/api/process', {
-  fromWallet: wallet.publicKey,
-  signTransaction: wallet.signTransaction,
-  body: { input: 'test data' }
+if (result.success) {
+  console.log('Data:', result.data);
+  console.log('Payment signature:', result.paymentResult?.signature);
+} else {
+  console.error('Error:', result.error);
+}
+```
+
+### Payment Client
+
+The payment client handles Solana payment transactions.
+
+```typescript
+import { PaymentClient } from '@147x402/buyer-sdk';
+
+const paymentClient = new PaymentClient({
+  rpcUrl: 'https://api.mainnet-beta.solana.com',
+  commitment: 'confirmed',
+  maxRetries: 3
 });
+
+// Make payment with instructions
+const result = await paymentClient.makePayment(
+  {
+    paymentId: 'payment_abc123',
+    amount: 0.0004,
+    token: 'USDC',
+    tokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    to: 'SELLER_WALLET_ADDRESS',
+    memo: 'ChainX402:payment_abc123'
+  },
+  wallet.publicKey,
+  wallet.signTransaction
+);
+
+if (result.success) {
+  console.log('Payment signature:', result.signature);
+} else {
+  console.error('Payment failed:', result.error);
+}
 ```
 
 ### Express.js Server with Payment
 
-```javascript
-const express = require('express');
-const { PaymentMiddleware } = require('@ChainX/seller-sdk');
+The seller SDK provides middleware for accepting payments in API endpoints.
+
+```typescript
+import express from 'express';
+import { PaymentMiddleware } from '@147x402/seller-sdk';
 
 const app = express();
+app.use(express.json());
+
 const paymentMiddleware = new PaymentMiddleware({
-  facilitatorUrl: 'https://facilitator.chainx402.xyz',
-  sellerWallet: 'YOUR_WALLET_ADDRESS',
+  facilitatorUrl: process.env.FACILITATOR_URL,
+  sellerWallet: process.env.SELLER_WALLET,
   defaultToken: 'USDC',
-  pricePerRequest: 0.0004
+  defaultTokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  pricePerRequest: 0.0004,
+  timeout: 300000 // 5 minutes
 });
 
-// Protected endpoint
-app.get('/api/data', paymentMiddleware.createMiddleware({
-  price: 0.0004,
-  token: 'USDC'
-}), (req, res) => {
-  // Payment verified, return data
-  res.json({ data: 'Protected content' });
-});
+// Protected endpoint - middleware returns HTTP 402 if no payment
+app.get('/api/data', 
+  paymentMiddleware.createMiddleware({
+    price: 0.0004,
+    token: 'USDC'
+  }),
+  (req, res) => {
+    // This only executes if payment is verified
+    res.json({ 
+      data: 'Protected content',
+      paymentId: req.headers['x-payment-id']
+    });
+  }
+);
 
 app.listen(3000);
 ```
 
----
+### Node.js/Fastify Server
+
+```typescript
+import { createPaidAPIServer } from '@147x402/seller-sdk';
+
+const server = await createPaidAPIServer({
+  facilitatorUrl: process.env.FACILITATOR_URL,
+  sellerWallet: process.env.SELLER_WALLET,
+  defaultToken: 'USDC',
+  defaultTokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  pricePerRequest: 0.0004,
+  port: parseInt(process.env.PORT || '3000')
+});
+
+console.log('ChainX Protocol Paid API Server is running');
+```
+
+Available Endpoints:
+- GET /health - Health check (free)
+- GET /info - Service info (free)
+- GET /api/data - Get data (paid - requires payment)
+- POST /api/process - Process data (paid - requires payment)
+
+## Solana Payment Implementation
+
+### Payment Transaction Creation
+
+```typescript
+import { 
+  Connection, 
+  PublicKey, 
+  Transaction, 
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+  sendAndConfirmTransaction,
+  TransactionInstruction
+} from '@solana/web3.js';
+import { 
+  getAssociatedTokenAddress, 
+  createTransferInstruction
+} from '@solana/spl-token';
+
+class PaymentClient {
+  private connection: Connection;
+
+  async createPaymentTransaction(
+    instructions: {
+      token: 'USDC' | 'SOL';
+      tokenMint?: string;
+      amount: number;
+      to: string;
+      memo?: string;
+    },
+    fromWallet: PublicKey
+  ): Promise<Transaction> {
+    const transaction = new Transaction();
+
+    if (instructions.token === 'SOL') {
+      // SOL transfer
+      transaction.add(
+        SystemProgram.transfer({
+          fromPubkey: fromWallet,
+          toPubkey: new PublicKey(instructions.to),
+          lamports: instructions.amount * LAMPORTS_PER_SOL
+        })
+      );
+    } else {
+      // SPL token transfer (USDC)
+      const fromTokenAccount = await getAssociatedTokenAddress(
+        new PublicKey(instructions.tokenMint!),
+        fromWallet
+      );
+      const toTokenAccount = await getAssociatedTokenAddress(
+        new PublicKey(instructions.tokenMint!),
+        new PublicKey(instructions.to)
+      );
+
+      transaction.add(
+        createTransferInstruction(
+          fromTokenAccount,
+          toTokenAccount,
+          fromWallet,
+          instructions.amount * Math.pow(10, 6) // USDC has 6 decimals
+        )
+      );
+    }
+
+    // Add memo instruction if provided
+    if (instructions.memo) {
+      transaction.add(
+        new TransactionInstruction({
+          keys: [],
+          programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysKcWfC85B2q2'),
+          data: Buffer.from(instructions.memo, 'utf8')
+        })
+      );
+    }
+
+    return transaction;
+  }
+}
+
+// Usage
+const paymentClient = new PaymentClient();
+const transaction = await paymentClient.createPaymentTransaction(
+  {
+    token: 'USDC',
+    tokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    amount: 0.0004,
+    to: 'SELLER_WALLET_ADDRESS',
+    memo: 'ChainX402:payment_abc123'
+  },
+  wallet.publicKey
+);
+
+const signed = await wallet.signTransaction(transaction);
+const signature = await sendAndConfirmTransaction(
+  connection,
+  signed,
+  [],
+  { commitment: 'confirmed', maxRetries: 3 }
+);
+console.log('Payment signature:', signature);
+```
 
 ## Python
 
@@ -132,9 +239,6 @@ app.listen(3000);
 import requests
 from solana.transaction import Transaction
 from solders.keypair import Keypair
-from solders.pubkey import Pubkey
-from spl.token.instructions import transfer, TransferParams
-from spl.token.client import Token
 
 def send_solana_payment(instructions, wallet):
     """Send Solana payment transaction"""
@@ -145,15 +249,12 @@ def send_solana_payment(instructions, wallet):
     seller_wallet = Pubkey.from_string(instructions['to'])
     
     # Create transfer transaction
-    # ... (implementation details)
+    # Implementation details...
     
     return signature
 
-def call_paid_api(endpoint):
+def call_paid_api(api_url, endpoint):
     """Call paid API with automatic payment handling"""
-    api_url = 'https://api.chainx402.xyz'
-    facilitator_url = 'https://facilitator.chainx402.xyz'
-    
     # Step 1: Initial request
     response = requests.get(f'{api_url}{endpoint}')
     
@@ -165,39 +266,15 @@ def call_paid_api(endpoint):
         seller_wallet = response.headers.get('X-Payment-To')
         token_mint = response.headers.get('X-Payment-Token-Mint')
         
-        # Step 3: Get payment instructions
-        payment_request = requests.post(
-            f'{facilitator_url}/payment/request',
-            json={
-                'chain': 'solana',
-                'seller': seller_wallet,
-                'amount': amount,
-                'token': token,
-                'tokenMint': token_mint,
-                'metadata': {
-                    'apiEndpoint': endpoint,
-                    'paymentId': payment_id,
-                    'timestamp': int(time.time() * 1000)
-                }
-            }
-        )
+        # Step 3: Create payment transaction
+        signature = send_solana_payment({
+            'tokenMint': token_mint,
+            'to': seller_wallet,
+            'amount': amount,
+            'memo': f'ChainX:{payment_id}'
+        }, wallet)
         
-        payment_instructions = payment_request.json()['paymentInstructions']
-        
-        # Step 4: Send payment
-        signature = send_solana_payment(payment_instructions, wallet)
-        
-        # Step 5: Verify payment
-        verify_response = requests.post(
-            f'{facilitator_url}/payment/verify',
-            json={
-                'paymentId': payment_id,
-                'signature': signature,
-                'chain': 'solana'
-            }
-        )
-        
-        # Step 6: Retry with payment proof
+        # Step 4: Retry with payment proof
         response = requests.get(
             f'{api_url}{endpoint}',
             headers={
@@ -209,293 +286,16 @@ def call_paid_api(endpoint):
     return response.json()
 
 # Usage
-data = call_paid_api('/api/data')
+data = call_paid_api('https://your-api.com', '/api/data')
 print(data)
 ```
-
-### FastAPI Server with Payment
-
-```python
-from fastapi import FastAPI, Request, Response
-from fastapi.responses import JSONResponse
-from chainx.seller_sdk import PaymentMiddleware
-
-app = FastAPI()
-
-payment_middleware = PaymentMiddleware(
-    facilitator_url='https://facilitator.chainx402.xyz',
-    seller_wallet='YOUR_WALLET_ADDRESS',
-    default_token='USDC',
-    price_per_request=0.0004
-)
-
-@app.get("/api/data")
-async def get_data(request: Request):
-    # Check payment headers
-    payment_id = request.headers.get('X-Payment-Id')
-    signature = request.headers.get('X-Payment-Signature')
-    
-    if not payment_id or not signature:
-        # Return HTTP 402
-        return JSONResponse(
-            status_code=402,
-            content={"error": "Payment Required"},
-            headers={
-                "X-Payment-Id": payment_middleware.create_payment_id(),
-                "X-Payment-Amount": "0.0004",
-                "X-Payment-Token": "USDC",
-                # ... other headers
-            }
-        )
-    
-    # Verify payment
-    is_valid = await payment_middleware.verify_payment(payment_id, signature)
-    
-    if not is_valid:
-        return JSONResponse(
-            status_code=402,
-            content={"error": "Payment verification failed"}
-        )
-    
-    # Payment verified, return data
-    return {"data": "Protected content"}
-```
-
----
-
-## Node.js/Express
-
-### Complete Server Example
-
-```javascript
-const express = require('express');
-const { PaymentMiddleware } = require('@ChainX/seller-sdk');
-
-const app = express();
-app.use(express.json());
-
-const paymentMiddleware = new PaymentMiddleware({
-  facilitatorUrl: 'https://facilitator.chainx402.xyz',
-  sellerWallet: 'YOUR_WALLET_ADDRESS',
-  defaultToken: 'USDC',
-  pricePerRequest: 0.0004
-});
-
-// Health check (free)
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-// Protected endpoint
-app.get('/api/data', 
-  paymentMiddleware.createMiddleware({
-    price: 0.0004,
-    token: 'USDC'
-  }),
-  (req, res) => {
-    res.json({
-      data: 'Protected data',
-      paymentId: req.headers['x-payment-id']
-    });
-  }
-);
-
-// Protected POST endpoint
-app.post('/api/process',
-  paymentMiddleware.createMiddleware({
-    price: 0.0004,
-    token: 'USDC'
-  }),
-  (req, res) => {
-    const { input } = req.body;
-    res.json({
-      result: `Processed: ${input}`,
-      paymentId: req.headers['x-payment-id']
-    });
-  }
-);
-
-app.listen(3000, () => {
-  console.log('ChainX Protocol API Server running on port 3000');
-});
-```
-
----
-
-## Solana Payment Implementation
-
-### Complete Solana Payment Example
-
-```javascript
-import { Connection, PublicKey, Transaction } from '@solana/web3.js';
-import { 
-  getAssociatedTokenAddress, 
-  createTransferInstruction,
-  TOKEN_PROGRAM_ID
-} from '@solana/spl-token';
-import { createMemoInstruction } from '@solana/web3.js';
-
-async function sendSolanaPayment(instructions, wallet, connection) {
-  const tokenMint = new PublicKey(instructions.tokenMint);
-  const sellerWallet = new PublicKey(instructions.to);
-  const buyerWallet = wallet.publicKey;
-  
-  // Get token accounts
-  const buyerTokenAccount = await getAssociatedTokenAddress(
-    tokenMint,
-    buyerWallet
-  );
-  const sellerTokenAccount = await getAssociatedTokenAddress(
-    tokenMint,
-    sellerWallet
-  );
-  
-  // Create transfer instruction
-  const transferInstruction = createTransferInstruction(
-    buyerTokenAccount,
-    sellerTokenAccount,
-    buyerWallet,
-    instructions.amount * 1e6, // USDC has 6 decimals
-    [],
-    TOKEN_PROGRAM_ID
-  );
-  
-  // Create transaction
-  const transaction = new Transaction().add(transferInstruction);
-  
-  // Add memo
-  const memoInstruction = createMemoInstruction(
-    instructions.memo,
-    [buyerWallet]
-  );
-  transaction.add(memoInstruction);
-  
-  // Get recent blockhash
-  const { blockhash } = await connection.getLatestBlockhash();
-  transaction.recentBlockhash = blockhash;
-  transaction.feePayer = buyerWallet;
-  
-  // Sign transaction
-  const signed = await wallet.signTransaction(transaction);
-  
-  // Send transaction
-  const signature = await connection.sendRawTransaction(signed.serialize());
-  
-  // Confirm transaction
-  await connection.confirmTransaction(signature, 'confirmed');
-  
-  return signature;
-}
-
-// Usage
-const signature = await sendSolanaPayment(
-  paymentInstructions,
-  wallet,
-  connection
-);
-console.log('Payment sent:', signature);
-```
-
----
-
-## React/Next.js Client Example
-
-```jsx
-import { useState } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection, PublicKey } from '@solana/web3.js';
-
-export default function ChainXClient() {
-  const { publicKey, signTransaction } = useWallet();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  
-  async function fetchPaidData() {
-    setLoading(true);
-    try {
-      const client = createAPIClient({
-        facilitatorUrl: 'https://facilitator.chainx402.xyz',
-        rpcUrl: 'https://api.mainnet-beta.solana.com'
-      });
-      
-      const result = await client.get(
-        'https://api.chainx402.xyz',
-        '/api/data',
-        {
-          fromWallet: publicKey,
-          signTransaction: signTransaction
-        }
-      );
-      
-      setData(result);
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
-  
-  return (
-    <div>
-      <button onClick={fetchPaidData} disabled={loading}>
-        {loading ? 'Loading...' : 'Fetch Paid Data'}
-      </button>
-      {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
-    </div>
-  );
-}
-```
-
----
-
-## cURL Examples
-
-### Basic Request
-
-```bash
-# Initial request (will get HTTP 402)
-curl -i https://api.chainx402.xyz/api/data
-
-# After payment, retry with headers
-curl -H "X-Payment-Id: payment_abc123" \
-     -H "X-Payment-Signature: 5j7s8..." \
-     https://api.chainx402.xyz/api/data
-```
-
-### Payment Request
-
-```bash
-curl -X POST https://facilitator.chainx402.xyz/payment/request \
-  -H "Content-Type: application/json" \
-  -d '{
-    "chain": "solana",
-    "seller": "SELLER_WALLET",
-    "amount": 0.0004,
-    "token": "USDC",
-    "tokenMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-  }'
-```
-
-### Payment Verification
-
-```bash
-curl -X POST https://facilitator.chainx402.xyz/payment/verify \
-  -H "Content-Type: application/json" \
-  -d '{
-    "paymentId": "payment_abc123",
-    "signature": "5j7s8...",
-    "chain": "solana"
-  }'
-```
-
----
 
 ## Error Handling
 
 ```javascript
-async function callPaidAPI(endpoint) {
+async function callPaidAPI(apiUrl, endpoint) {
   try {
-    let response = await fetch(`https://api.chainx402.xyz${endpoint}`);
+    let response = await fetch(`${apiUrl}${endpoint}`);
     
     if (response.status === 402) {
       // Handle payment flow
@@ -503,7 +303,7 @@ async function callPaidAPI(endpoint) {
       const signature = await processPayment(paymentInfo);
       
       // Retry with payment
-      response = await fetch(`https://api.chainx402.xyz${endpoint}`, {
+      response = await fetch(`${apiUrl}${endpoint}`, {
         headers: {
           'X-Payment-Id': paymentInfo.paymentId,
           'X-Payment-Signature': signature
@@ -523,7 +323,4 @@ async function callPaidAPI(endpoint) {
 }
 ```
 
----
-
-For more examples, visit: https://chainx402.xyz/examples
-
+For more information, visit: https://chainx402.xyz
